@@ -4,7 +4,7 @@ from aiogram import Router, F
 from aiogram.enums import ChatType
 from aiogram.filters import CommandStart, StateFilter, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ReplyKeyboardRemove
 from aiogram_media_group import media_group_handler
 
 from config import PHOTOS_DIR, ADMIN_CHAT_ID, OWNER_TG_IDS
@@ -30,6 +30,7 @@ async def user_blocked_filter(obj: Message | CallbackQuery):
 
     return True
 
+ADMIN_MESSAGES: dict[int, int] = {}
 
 user_router = Router(name="user")
 user_router.message.filter(user_blocked_filter)
@@ -40,7 +41,7 @@ async def handle_start(message: Message, state: FSMContext):
     user_id = message.from_user.id
     async with get_session() as session:
         user = await get_user(session, user_id)
-        if not user: user = await create_user(session, UserCreate(id=user_id))
+        if not user: await create_user(session, UserCreate(id=user_id))
 
     await message.answer(user_texts.greetings.replace('*', message.chat.full_name), reply_markup=user_keyboards.user_menu)
     await message.delete()
@@ -69,6 +70,26 @@ async def handle_unblock(message: Message):
             if not user: user = await create_user(session, UserCreate(id=user_id))
             user = await update_user(session, user.id, UserUpdate(blocked=True))
         await message.bot.send_message(ADMIN_CHAT_ID, f"🔐 Пользователь с ID {user.id} <b>успешно заблокирован админом {message.from_user.mention_html()}</b>")
+
+@user_router.message(user_states.MessageAdmin.phone)
+async def handle_phone_message(message: Message, state: FSMContext):
+    if message.contact:
+        phone = message.contact.phone_number
+        await state.update_data(phone=phone)
+        x = await message.answer('/delete_keyboard', reply_markup=ReplyKeyboardRemove())
+        await x.delete()
+        await message.answer("💬 Отлично, теперь отправьте сообщение, и оно будет направлено администрации в ту же секунду 👨🏻‍💻", reply_markup=user_keyboards.main_menuu)
+
+    else:
+        state_data = await state.get_data()
+        phone = state_data.get("phone", "<b>Номер не указан, отправителю не нужна обратная связь</b>")
+        await message.forward(ADMIN_CHAT_ID)
+        await message.bot.send_message(ADMIN_CHAT_ID, f"📩 <b>Новое сообщение для администрации!!\nДоступная информация по отправителю</b>\n\n{message.from_user.mention_html()}\n{('@'+message.from_user.username) if message.from_user.username else 'Нет никнейма'}\nID: <code>{message.from_user.id}</code>\n\n{phone}")
+        ADMIN_MESSAGES[message.from_user.id] = 1 if message.from_user.id not in ADMIN_MESSAGES else ADMIN_MESSAGES[message.from_user.id] + 1
+        x = await message.answer('/delete_keyboard', reply_markup=ReplyKeyboardRemove())
+        await x.delete()
+        await message.answer(f"🎉 Ваше сообщение <b>было успешно отправлено</b>", reply_markup=user_keyboards.main_menuu)
+
 
 @user_router.message(F.media_group_id, user_states.EditDraft.photo)
 @media_group_handler
@@ -140,7 +161,7 @@ async def handle_edit_draft(message: Message, state: FSMContext):
 async def handle_user_call(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
     async with get_session() as session: user = await get_user(session, user_id)
-    state_data = await state.get_data()
+    await state.get_data()
     data = call.data.removeprefix("user:").split(":")
     if data[0] == "share_result":
         if data[1] == "start":
@@ -161,7 +182,7 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
 
     elif data[0] == "terms":
         if data[1] == "yes":
-            async with get_session() as session: user = await update_user(session, user_id, UserUpdate(accepted_terms=True))
+            async with get_session() as session: await update_user(session, user_id, UserUpdate(accepted_terms=True))
             await call.message.edit_text(user_texts.share_result_anonymity.replace('*', call.from_user.full_name), reply_markup=user_keyboards.share_result_anonymity)
 
 
@@ -260,10 +281,19 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
 
     elif data[0] == "main_menu": await handle_start(call.message, state)
     elif data[0] == "main_menuu":
-        user_id = call.from_user.id
         async with get_session() as session:
             user = await get_user(session, user_id)
-            if not user: user = await create_user(session, UserCreate(id=user_id))
+            if not user: await create_user(session, UserCreate(id=user_id))
 
         await call.message.answer(user_texts.greetings.replace('*', call.message.chat.full_name), reply_markup=user_keyboards.user_menu)
         await state.clear()
+
+    elif data[0] == "message_admins":
+        if data[1] == "start":
+            if user_id not in ADMIN_MESSAGES or ADMIN_MESSAGES[user_id] < 3:
+                await call.message.answer(user_texts.message_admins_start, reply_markup=user_keyboards.message_admin_phone)
+                await state.set_state(user_states.MessageAdmin.phone)
+
+            else: await call.message.edit_text("<b>🙃 Сожалеем, в час можно отправить до 3х сообщений</b>", reply_markup=user_keyboards.main_menuu)
+
+    return None

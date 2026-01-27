@@ -13,3 +13,6 @@ class EditDraft(StatesGroup):
     course = State()
     photo = State()
     commentary = State()
+
+class MessageAdmin(StatesGroup):
+    phone = State()

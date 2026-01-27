@@ -7,7 +7,6 @@ from src.helpers import missing_required_in_draft
 
 def mark(flag: bool) -> str: return "✅" if flag else "❌"
 
-
 DRAFT_FIELD_LABELS: dict[str, str] = {
     "drugs": "Препарат (или несколько)",
     "age": "Возраст (по желанию)",
@@ -31,7 +30,6 @@ main_menuu = InlineKeyboardMarkup(inline_keyboard=[[main_menuu_button]])
 
 user_menu = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='📝 Поделиться результатом', callback_data="user:share_result:start")],
-    [InlineKeyboardButton(text='💬 Оставить отзыв', callback_data="user:review:start")],
     [InlineKeyboardButton(text='✉️ Написать администрации', callback_data="user:message_admins:start")],
 ])
 
@@ -106,4 +104,8 @@ def to_draft(draft_id: int):
 
 support = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="👨🏻‍💻 Поддержка", url="t.me/ShostakovIV")]
+])
+
+message_admin_phone = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True, keyboard=[
+    [KeyboardButton(text="📲 Поделиться номером", request_contact=True)],
 ])
