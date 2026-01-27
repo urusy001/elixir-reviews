@@ -25,7 +25,7 @@ DRAFT_FIELD_LABELS: dict[str, str] = {
 main_menu_button = InlineKeyboardButton(text='🔙 В главное меню', callback_data='user:main_menu')
 main_menu = InlineKeyboardMarkup(inline_keyboard=[[main_menu_button]])
 
-main_menuu_button = InlineKeyboardButton(text='🔙 В главное меню', callback_data='user:main_menuk')
+main_menuu_button = InlineKeyboardButton(text='🔙 В главное меню', callback_data='user:main_menuu')
 main_menuu = InlineKeyboardMarkup(inline_keyboard=[[main_menuu_button]])
 
 user_menu = InlineKeyboardMarkup(inline_keyboard=[
