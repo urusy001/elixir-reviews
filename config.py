@@ -21,3 +21,4 @@ ASYNC_DB_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTG
 
 WORKING_DIR = Path(__file__).parent
 PHOTOS_DIR = WORKING_DIR / "photos"
+PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
