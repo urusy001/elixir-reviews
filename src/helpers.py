@@ -34,7 +34,7 @@ def missing_required_in_draft(draft) -> list[str]:
             missing.append(name.removesuffix("_url"))
             continue
 
-        if isinstance(val, str) and not val.strip():
+        if isinstance(val, str) and (val == "Не указан" or not val.strip()):
             missing.append(name.removesuffix("_url"))
             continue
 
