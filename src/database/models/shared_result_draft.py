@@ -89,7 +89,7 @@ class SharedResultDraft(Base):
 
     def preview(self) -> str:
         return (
-            f"<b>ПРЕДПОСТОМР ОТЗЫВА #{self.id}</b>\n"
+            f"<b>ПРЕДПРОСМОТР ОТЗЫВА #{self.id}</b>\n"
             f"<b>~{self.lost_weight or '—'}кг</b>\n"
             f"{f'<b>Возраст:</b> {self.age or '—'}\n' if self.age is not None else ''}"
             f"<b>Пол:</b> {self.gender or '—'}\n"
