@@ -167,7 +167,7 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
     data = call.data.removeprefix("user:").split(":")
     if data[0] == "share_result":
         if data[1] == "start":
-            if not user.accepted_terms: await call.message.answer(user_texts.share_result_terms, reply_markup=user_keyboards.share_result_terms)
+            if not user.accepted_terms: await call.message.edit_text(user_texts.share_result_terms, reply_markup=user_keyboards.share_result_terms)
             else:
                 async with get_session() as session: user_drafts = await list_drafts(session, user_id)
                 if not user_drafts: await call.message.edit_text(user_texts.share_result_anonymity.replace('*', call.from_user.username or call.from_user.full_name), reply_markup=user_keyboards.share_result_anonymity)
