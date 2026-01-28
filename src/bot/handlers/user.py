@@ -128,7 +128,7 @@ async def handle_edit_draft(message: Message, state: FSMContext):
     elif 'weight' in what or what == 'height':
         if not message.text.replace(',', '.').replace('.', '').isdigit(): return await message.answer(user_texts.send_num_weight)
         else:
-            new_value = round(float(message.text.strip()), 2)
+            new_value = round(float(message.text.strip().replace(',', '.')), 2)
             draft_update = SharedResultDraftUpdate(**{what: new_value})
             async with get_session() as session: draft = await update_draft(session, draft_id, draft_update)
 
