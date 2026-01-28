@@ -33,6 +33,10 @@ user_menu = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text='✉️ Написать администрации', callback_data="user:message_admins:start")],
 ])
 
+admin_messaging = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='✉️ Написать администрации', callback_data="user:message_admins:start")],
+])
+
 share_result_terms = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="✅ Согласен", callback_data="user:terms:yes"),
      InlineKeyboardButton(text="❌ Отказываюсь", callback_data="user:terms:no")],

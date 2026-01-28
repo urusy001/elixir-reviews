@@ -1,6 +1,7 @@
 from pathlib import Path
 from aiogram import Router
 from aiogram.enums import ChatType
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InputMediaPhoto, FSInputFile, Message
 
@@ -21,7 +22,22 @@ async def handle_admin_correction(message: Message, state: FSMContext):
     state_data = await state.get_data()
     user_id = int(state_data["user_id"])
     draft_id = int(state_data["draft_id"])
-    await message.bot.send_message(user_id, f"<b>Сообщение от администрации.</b>\nВаш черновик #{draft_id} <u>нуждается в правке перед публикацией</u>\n\n{message.html_text.strip()}", reply_markup=user_keyboards.to_draft(draft_id))
+    await message.bot.send_message(user_id, f"<b>📩 Сообщение от администрации.</b>\nВаш черновик #{draft_id} <u>нуждается в правке перед публикацией</u> ✏️\n\n{message.html_text.strip()}\n\nПосле правок <b>повторно отправьте черновик на публикацию</b>", reply_markup=user_keyboards.to_draft(draft_id))
+    await state.clear()
+    await message.reply(f"✏️ Сообщение с правкой <b>успешно отправлено пользователю админом {message.from_user.mention_html()}</b>\n{message.html_text.strip()}")
+
+@admin_router.message(Command("send_message"))
+async def handle_send_message(message: Message):
+    parts = message.html_text.removeprefix('/send_message ').split(maxsplit=1)
+    if len(parts) != 2 or not parts[0].isdigit(): await message.answer("Ошибка команды, следуйте инструкциям выше")
+    else:
+        user_id = int(parts[0])
+        text = parts[1]
+        try:
+            user = await message.bot.get_chat(user_id)
+            await message.bot.send_message(user_id, f"📩 У вас новое сообщение от администрации\n{text}", reply_markup=user_keyboards.admin_messaging)
+            await message.reply(f"Сообщение от имени бота <b>успешно отправлено пользователю {user.full_name} админом {message.from_user.mention_html()}\n{parts[1]}</b>")
+        except Exception as e: await message.answer(f"Ошибка отправки сообщения: <b>Человеку нельзя отправить сообщение</b>\n{e}")
 
 @admin_router.callback_query()
 async def handle_admin_call(call: CallbackQuery, state: FSMContext):
@@ -71,12 +87,12 @@ async def handle_admin_call(call: CallbackQuery, state: FSMContext):
     elif data[0] == "block_user":
         user_id = int(data[1])
         async with get_session() as session: user = await update_user(session, user_id, UserUpdate(blocked=True))
-        await call.message.answer(f"🔐 Пользователь с ID <code>{user_id}</code> <b>успешно заблокирован админом {call.from_user.mention_html()}</b>\n<i>Пожалуйста, не удаляйте это сообщение из чата</i>", reply_markup=admin_keyboards.unblock_user(user_id))
+        await call.message.answer(f"🔐 Пользователь с ID <code>{user_id}</code> <b>успешно заблокирован админом {call.from_user.mention_html()}</b>", reply_markup=admin_keyboards.unblock_user(user_id))
 
     elif data[0] == "unblock_user":
         user_id = int(data[1])
         async with get_session() as session: user = await update_user(session, user_id, UserUpdate(blocked=False))
-        await call.message.answer(f"🔓 Пользователь с ID <code>{user_id}</code> <b>успешно разблокирован админом {call.from_user.mention_html()}</b>\n<i>Пожалуйста, не удаляйте это сообщение из чата</i>")
+        await call.message.answer(f"🔓 Пользователь с ID <code>{user_id}</code> <b>успешно разблокирован админом {call.from_user.mention_html()}</b>")
 
     elif data[0] == "delete_review":
         draft_id = int(data[1])

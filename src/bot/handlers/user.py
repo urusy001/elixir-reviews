@@ -43,6 +43,8 @@ async def handle_start(message: Message, state: FSMContext):
         user = await get_user(session, user_id)
         if not user: await create_user(session, UserCreate(id=user_id))
 
+    x = await message.answer('delete_keyboard', reply_markup=ReplyKeyboardRemove())
+    await x.delete()
     await message.answer(user_texts.greetings.replace('*', message.chat.full_name), reply_markup=user_keyboards.user_menu)
     await message.delete()
     await state.clear()
@@ -69,12 +71,14 @@ async def handle_unblock(message: Message):
             user = await get_user(session, user_id)
             if not user: user = await create_user(session, UserCreate(id=user_id))
             user = await update_user(session, user.id, UserUpdate(blocked=True))
+
         await message.bot.send_message(ADMIN_CHAT_ID, f"🔐 Пользователь с ID {user.id} <b>успешно заблокирован админом {message.from_user.mention_html()}</b>")
 
-@user_router.message(user_states.MessageAdmin.phone)
+@user_router.message(user_states.MessageAdmin.phone, lambda message: message.contact or message.text.strip())
 async def handle_phone_message(message: Message, state: FSMContext):
     if message.contact:
         phone = message.contact.phone_number
+        if phone[0] != "+": phone = f"+{phone}"
         await state.update_data(phone=phone)
         x = await message.answer('/delete_keyboard', reply_markup=ReplyKeyboardRemove())
         await x.delete()
@@ -82,14 +86,12 @@ async def handle_phone_message(message: Message, state: FSMContext):
 
     else:
         state_data = await state.get_data()
-        phone = state_data.get("phone", "<b>Номер не указан, отправителю не нужна обратная связь</b>")
-        await message.forward(ADMIN_CHAT_ID)
-        await message.bot.send_message(ADMIN_CHAT_ID, f"📩 <b>Новое сообщение для администрации!!\nДоступная информация по отправителю</b>\n\n{message.from_user.mention_html()}\n{('@'+message.from_user.username) if message.from_user.username else 'Нет никнейма'}\nID: <code>{message.from_user.id}</code>\n\n{phone}")
+        phone = state_data.get("phone", f"<b>Номер не указан, отправителю не нужна обратная связь</b>, но все же можете отправить человеку сообщение <i>от имени бота</i> следующим образом:\n<code>/send_message {message.from_user.id} сообщение</code>")
+        await message.bot.send_message(ADMIN_CHAT_ID, f"📩 <b>Новое сообщение для администрации!!\n\n{message.from_user.full_name} пишет:</b>\n{message.html_text}\n\n<b>Доступная информация по отправителю</b>\n{('@'+message.from_user.username) if message.from_user.username else 'Нет никнейма'}\nID: <code>{message.from_user.id}</code>\n\n{phone}", reply_markup=admin_keyboards.messaged_admins(message.from_user.id))
         ADMIN_MESSAGES[message.from_user.id] = 1 if message.from_user.id not in ADMIN_MESSAGES else ADMIN_MESSAGES[message.from_user.id] + 1
         x = await message.answer('/delete_keyboard', reply_markup=ReplyKeyboardRemove())
         await x.delete()
         await message.answer(f"🎉 Ваше сообщение <b>было успешно отправлено</b>", reply_markup=user_keyboards.main_menuu)
-
 
 @user_router.message(F.media_group_id, user_states.EditDraft.photo)
 @media_group_handler
@@ -168,7 +170,7 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
             if not user.accepted_terms: await call.message.answer(user_texts.share_result_terms, reply_markup=user_keyboards.share_result_terms)
             else:
                 async with get_session() as session: user_drafts = await list_drafts(session, user_id)
-                if not user_drafts: await call.message.edit_text(user_texts.share_result_anonymity.replace('*', call.from_user.full_name), reply_markup=user_keyboards.share_result_anonymity)
+                if not user_drafts: await call.message.edit_text(user_texts.share_result_anonymity.replace('*', call.from_user.username or call.from_user.full_name), reply_markup=user_keyboards.share_result_anonymity)
                 else: await call.message.edit_text(user_texts.view_drafts, reply_markup=user_keyboards.view_drafts(user_drafts))
 
         elif data[1] == "anonymity":
@@ -199,7 +201,6 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
                         media = [InputMediaPhoto(media=FSInputFile(path), caption=f"Фотографии черновика #{draft_id}") for path in review_photos_dir.iterdir() if path.is_file() and path.suffix == ".jpg"]
                         if media: await call.message.answer_media_group(media)
                         await call.message.answer(str(draft), reply_markup=user_keyboards.draft_keyboard(**SharedResultDraftRead.model_validate(draft).model_dump()))
-                        await call.message.delete()
 
                     else: await call.message.edit_text(str(draft), reply_markup=user_keyboards.draft_keyboard(**SharedResultDraftRead.model_validate(draft).model_dump()))
                 elif data[2] in list(SharedResultDraftRead.model_fields.keys()):

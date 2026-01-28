@@ -7,7 +7,7 @@ def post_draft(draft: SharedResultDraft):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📣 Опубликовать", callback_data=f"admin:{draft.id}:{draft.user_id}:post_draft"),
          InlineKeyboardButton(text="✏️ На правку", callback_data=f"admin:{draft.id}:{draft.user_id}:correction")],
-        [InlineKeyboardButton(text="🔐 Заблокировать пользователя ⛔️", callback_data=f"admin:block_user:{draft.user_id}")],
+        [InlineKeyboardButton(text="🔐 Заблокировать пользователя", callback_data=f"admin:block_user:{draft.user_id}")],
     ])
 
 def back_to_draft(draft: SharedResultDraft):
@@ -26,3 +26,6 @@ def posted_draft(draft_id: int, message_id: int, url: str, message_ids: list[int
 
 def recover_review(draft_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="♻️ Вернуть отзыв", callback_data=f"admin:recover_review:{draft_id}")]])
+
+def messaged_admins(user_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔐 Заблокировать пользователя", callback_data=f"admin:block_user:{user_id}")]])
