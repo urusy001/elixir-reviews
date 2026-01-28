@@ -27,7 +27,7 @@ async def handle_admin_correction(message: Message, state: FSMContext):
     await message.reply(f"✏️ Сообщение с правкой <b>успешно отправлено пользователю админом {message.from_user.mention_html()}</b>\n{message.html_text.strip()}")
 
 @admin_router.message(Command("send_message"))
-async def handle_send_message(message: Message):
+async def handle_send_message(message: Message, state: FSMContext):
     parts = message.html_text.removeprefix('/send_message ').split(maxsplit=1)
     if len(parts) != 2 or not parts[0].isdigit(): await message.answer("Ошибка команды, следуйте инструкциям выше")
     else:
@@ -38,6 +38,7 @@ async def handle_send_message(message: Message):
             await message.bot.send_message(user_id, f"📩 У вас новое сообщение от администрации\n{text}", reply_markup=user_keyboards.admin_messaging)
             await message.reply(f"Сообщение от имени бота <b>успешно отправлено пользователю {user.full_name} админом {message.from_user.mention_html()}\n{parts[1]}</b>")
         except Exception as e: await message.answer(f"Ошибка отправки сообщения: <b>Человеку нельзя отправить сообщение</b>\n{e}")
+    await state.clear()
 
 @admin_router.callback_query()
 async def handle_admin_call(call: CallbackQuery, state: FSMContext):
