@@ -219,7 +219,7 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
                                 break
 
                     new_state = getattr(user_states.EditDraft, data[2], None)
-                    await call.message.answer(f'<b>Старое значение убрано для {what.lower()}</b>. Введите новое', reply_markup=user_keyboards.choose_gender if data[2] =='gender' else None)
+                    await call.message.answer(f'<b>Старое значение убрано для {what.lower()}</b>. Введите новое\n\nВозврат в главное меню — /start', reply_markup=user_keyboards.choose_gender if data[2] =='gender' else None)
                     await state.set_state(new_state)
                     await state.update_data(what=data[2], draft_id=draft_id, what_kword=what)
 
@@ -231,7 +231,7 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
                     for p in review_photos_dir.iterdir(): p.unlink()
                     try: await call.message.edit_reply_markup(reply_markup=user_keyboards.draft_keyboard(**SharedResultDraftRead.model_validate(draft).model_dump()))
                     except: pass
-                    await call.message.answer(f"<b>Прошлые фотографии</b> черновика #{draft_id} удалены. Отправьте новые (до 3х штук)")
+                    await call.message.answer(f"<b>Прошлые фотографии</b> черновика #{draft_id} удалены. Отправьте новые (до 3х штук)\n\nГлавное меню — /start")
                     await state.set_state(user_states.EditDraft.photo)
                     await state.set_data({"review_photos_dir": review_photos_dir, "draft_id": draft_id})
                     async with get_session() as session: await update_draft(session, draft_id, SharedResultDraftUpdate(photo_url=f"{review_photos_dir.absolute()}"))
