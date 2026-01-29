@@ -93,6 +93,22 @@ async def handle_phone_message(message: Message, state: FSMContext):
         await x.delete()
         await message.answer(f"🎉 Ваше сообщение <b>было успешно отправлено</b>", reply_markup=user_keyboards.main_menuu)
 
+@user_router.message(user_states.EditDraft.photo, F.photo)
+async def handle_single_photo(message: Message, state: FSMContext):
+    state_data = await state.get_data()
+    review_photos_dir: Path = state_data["review_photos_dir"]
+    draft_id: int = state_data["draft_id"]
+
+    file_id = message.photo[-1].file_id
+    file = await message.bot.get_file(file_id)
+    await message.bot.download_file(file.file_path, destination=review_photos_dir / f"{file_id}.jpg")
+    async with get_session() as session: draft = await get_draft(session, draft_id)
+    if draft.user_id != message.from_user.id: return await message.answer(f"Ошибка: Черновик #{draft.id} <b>не в вашем владении!</b>")
+
+    await send_draft_photos_if_exist(message, draft)
+    await message.answer(f"Значение для <b>фото 'до/после' (опционально) черновика #{draft_id}</b> успешно изменено на 1")
+    return await message.answer(str(draft), reply_markup=user_keyboards.draft_keyboard(**SharedResultDraftRead.model_validate(draft).model_dump()))
+
 @user_router.message(F.media_group_id, user_states.EditDraft.photo)
 @media_group_handler
 async def album_handler(messages: list[Message], state: FSMContext):
