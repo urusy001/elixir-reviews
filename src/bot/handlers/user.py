@@ -131,6 +131,7 @@ async def album_handler(messages: list[Message], state: FSMContext):
 @user_router.message(StateFilter(user_states.EditDraft))
 async def handle_edit_draft(message: Message, state: FSMContext):
     state_data = await state.get_data()
+    print(await state.get_state(), state_data)
     what = state_data["what"]
     what_kword = state_data["what_kword"]
     draft_id = state_data["draft_id"]
