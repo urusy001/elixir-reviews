@@ -86,8 +86,8 @@ async def handle_phone_message(message: Message, state: FSMContext):
 
     else:
         state_data = await state.get_data()
-        phone = state_data.get("phone", f"<b>\nНомер не указан, отправителю не нужна обратная связь</b>, но все же можете отправить человеку сообщение <i>от имени бота</i> следующим образом:\n<code>/send_message {message.from_user.id} сообщение</code>")
-        await message.bot.send_message(ADMIN_CHAT_ID, f"📩 <b>Новое сообщение для администрации!!\n\n{message.from_user.full_name} пишет:</b>\n{message.html_text}\n\n<b>Доступная информация по отправителю</b>\n{('@'+message.from_user.username) if message.from_user.username else 'Нет никнейма'}\nID: <code>{message.from_user.id}</code>\n{phone}", reply_markup=admin_keyboards.messaged_admins(message.from_user.id))
+        phone = state_data.get("phone", "<b>\nНомер не указан, отправителю не нужна обратная связь</b>")
+        await message.bot.send_message(ADMIN_CHAT_ID, f"📩 <b>Новое сообщение для администрации!!\n\n{message.from_user.full_name} пишет:</b>\n{message.html_text}\n\n<b>Доступная информация по отправителю</b>\n{('@'+message.from_user.username) if message.from_user.username else 'Нет никнейма'}\nID: <code>{message.from_user.id}</code>\n{phone}\nОтправить человеку сообщение <i>от имени бота</i>:\n<code>/send_message {message.from_user.id} сообщение</code>", reply_markup=admin_keyboards.messaged_admins(message.from_user.id))
         ADMIN_MESSAGES[message.from_user.id] = 1 if message.from_user.id not in ADMIN_MESSAGES else ADMIN_MESSAGES[message.from_user.id] + 1
         x = await message.answer('/delete_keyboard', reply_markup=ReplyKeyboardRemove())
         await x.delete()
