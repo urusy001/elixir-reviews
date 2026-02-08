@@ -3,6 +3,8 @@ from pathlib import Path
 from aiogram.types import FSInputFile, InputMediaPhoto, Message
 from src.database.models import SharedResultDraft
 
+APPOINTED_VALUES = ("врач", "сам(а) себе", "ботом")
+
 
 async def send_draft_photos_if_exist(message: Message, draft: SharedResultDraft):
     if draft.photo_url:
@@ -15,6 +17,7 @@ async def send_draft_photos_if_exist(message: Message, draft: SharedResultDraft)
 _REQUIRED = (
     "user_id",
     "drugs",
+    "appointed",
     "gender",
     "height",
     "starting_weight",
@@ -36,6 +39,10 @@ def missing_required_in_draft(draft) -> list[str]:
 
         if isinstance(val, str) and (val == "Не указан" or not val.strip()):
             missing.append(name.removesuffix("_url"))
+            continue
+
+        if name == "appointed" and val not in APPOINTED_VALUES:
+            missing.append(name)
             continue
 
         if isinstance(val, Decimal) and val == 0:

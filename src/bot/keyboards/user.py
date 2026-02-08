@@ -2,13 +2,14 @@ from pathlib import Path
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 from src.database.models import SharedResultDraft
-from src.helpers import missing_required_in_draft
+from src.helpers import APPOINTED_VALUES, missing_required_in_draft
 
 
 def mark(flag: bool) -> str: return "✅" if flag else "❌"
 
 DRAFT_FIELD_LABELS: dict[str, str] = {
     "drugs": "Препарат (или несколько)",
+    "appointed": "Кем назначено",
     "age": "Возраст (по желанию)",
     "gender": "Пол",
     "height": "Рост (см)",
@@ -18,6 +19,7 @@ DRAFT_FIELD_LABELS: dict[str, str] = {
     "lost_weight": "Сколько всего сброшено кг",
     "time_period": "Период похудения",
     "course": "Курсы/дозировки",
+    "author": "Автор",
     "photo": "Фото 'до/после' (опционально)",
     "commentary": "Комментарий (до 2000 символов, опционально)",
 }
@@ -52,6 +54,7 @@ share_result_anonymity = InlineKeyboardMarkup(inline_keyboard=[
 def draft_keyboard(**kwargs) -> InlineKeyboardMarkup:
     share_result_id = kwargs.get("id")
     drugs = kwargs.pop("drugs", None)
+    appointed = kwargs.pop("appointed", None)
     age = kwargs.pop("age", None)
     gender = kwargs.pop("gender", None)
     height = kwargs.pop("height", None)
@@ -70,6 +73,7 @@ def draft_keyboard(**kwargs) -> InlineKeyboardMarkup:
     commentary = kwargs.pop("commentary", None)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"{mark(drugs)} Препарат (или несколько) ‼️", callback_data=f"user:edit_draft:{share_result_id}:drugs")],
+        [InlineKeyboardButton(text=f"{mark(appointed in APPOINTED_VALUES)} Кем назначено ‼️", callback_data=f"user:edit_draft:{share_result_id}:appointed")],
         [InlineKeyboardButton(text=f"{mark(age)} Возраст (по желанию)", callback_data=f"user:edit_draft:{share_result_id}:age")],
         [InlineKeyboardButton(text=f'{"✅" if isinstance(gender, str) and gender.lower() != "не указан" else "❌"} Пол ‼️', callback_data=f"user:edit_draft:{share_result_id}:gender")],
         [InlineKeyboardButton(text=f"{mark(height)} Рост (см) ‼️", callback_data=f"user:edit_draft:{share_result_id}:height")],
@@ -101,6 +105,10 @@ choose_gender = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True
     [KeyboardButton(text="👨 Мужской"), KeyboardButton(text="👩 Женский")]
 ])
 
+choose_appointed = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True, keyboard=[
+    [KeyboardButton(text="врач"), KeyboardButton(text="сам(а) себе"), KeyboardButton(text="ботом")]
+])
+
 def to_draft(draft_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✏️ Править", callback_data=f"user:edit_draft:{draft_id}:view")]
@@ -113,3 +121,5 @@ support = InlineKeyboardMarkup(inline_keyboard=[
 message_admin_phone = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True, keyboard=[
     [KeyboardButton(text="📲 Поделиться номером", request_contact=True)],
 ])
+
+search_review_product = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔎 Поиск продукта", switch_inline_query_current_chat="search_review_product:")]])

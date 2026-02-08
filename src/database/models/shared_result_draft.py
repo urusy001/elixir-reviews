@@ -23,6 +23,7 @@ class SharedResultDraft(Base):
     drugs: Mapped[str | None] = mapped_column(Text, nullable=True)
     age: Mapped[int | None] = mapped_column(nullable=True)
     gender: Mapped[str] = mapped_column(String, nullable=False, default="Не указан")
+    appointed: Mapped[str | None] = mapped_column(String, nullable=True)
 
     height: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     starting_weight: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
@@ -47,6 +48,10 @@ class SharedResultDraft(Base):
             "gender in ('Не указан','👨 Мужской','👩 Женский')",
             name="ck_shared_result_drafts_gender",
         ),
+        CheckConstraint(
+            "appointed IS NULL OR appointed in ('врач','сам(а) себе','ботом')",
+            name="ck_shared_result_drafts_appointed",
+        ),
     )
 
     @property
@@ -63,6 +68,7 @@ class SharedResultDraft(Base):
         age = f"{self.age}" if self.age is not None else "—"
         desired = self.desired_weight if self.desired_weight is not None else "—"
         drugs = (self.drugs or "").strip() or "—"
+        appointed = (self.appointed or "").strip() or "—"
         time_period = (self.time_period or "").strip() or "—"
         course = (self.course or "").strip() or "—"
         commentary = (self.commentary or "").strip() or "—"
@@ -71,6 +77,7 @@ class SharedResultDraft(Base):
         return (
             f"ЧЕРНОВИК #{self.id}\n"
             f"💊 Препарат (или несколько): {drugs}\n"
+            f"🩺 Кем назначено: {appointed}\n"
             f"Возраст (по желанию): {age}\n"
             f"Пол: {self.gender}\n"
             f"Рост (см): {self.height or '—'}\n"
@@ -95,6 +102,7 @@ class SharedResultDraft(Base):
             f"<b>Пол:</b> {self.gender or '—'}\n"
             f"\n"
             f"💊 <b>Препарат(ы):</b> {self.drugs or '—'}\n"
+            f"🩺 <b>Кем назначено:</b> {self.appointed or '—'}\n"
             f"💉 <b>Курсы/Дозировки:</b> {self.course or '—'}\n"
             f"\n"
             f"📏 <b>Рост:</b> {self.height or '—'}см\n"
@@ -118,6 +126,7 @@ class SharedResultDraft(Base):
             f"<b>Пол:</b> {self.gender}\n"
             f"\n"
             f"💊 <b>Препарат(ы):</b> {self.drugs}\n"
+            f"🩺 <b>Кем назначено:</b> {self.appointed or '—'}\n"
             f"💉 <b>Курсы/Дозировки:</b> {self.course}\n"
             f"\n"
             f"📏 <b>Рост:</b> {self.height}см\n"

@@ -2,6 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 class EditDraft(StatesGroup):
     drugs = State()
+    appointed = State()
     age = State()
     gender = State()
     height = State()

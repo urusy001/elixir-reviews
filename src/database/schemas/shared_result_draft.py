@@ -7,12 +7,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Gender = Literal["Не указан", "👨 Мужской", "👩 Женский"]
+Appointed = Literal["врач", "сам(а) себе", "ботом"]
 
 
 class SharedResultDraftBase(BaseModel):
     drugs: str | None = None
     age: int | None = Field(default=None, ge=0, le=150)
     gender: Gender = "Не указан"
+    appointed: Appointed | None = None
 
     height: Decimal | None = Field(default=None, ge=Decimal("0"))
     starting_weight: Decimal | None = Field(default=None, ge=Decimal("0"))
@@ -27,7 +29,7 @@ class SharedResultDraftBase(BaseModel):
     commentary: str | None = Field(default=None, max_length=2000)
 
     is_submitted: bool = False
-    author: str | None = None
+    author: str | None = "Анонимно"
 
 
 class SharedResultDraftCreate(SharedResultDraftBase):
@@ -40,6 +42,7 @@ class SharedResultDraftUpdate(BaseModel):
     drugs: str | None = None
     age: int | None = Field(default=None, ge=0, le=150)
     gender: Gender | None = None
+    appointed: Appointed | None = None
 
     height: Decimal | None = Field(default=None, ge=Decimal("0"))
     starting_weight: Decimal | None = Field(default=None, ge=Decimal("0"))

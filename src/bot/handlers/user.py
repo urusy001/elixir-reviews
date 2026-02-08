@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import get_args
+
+import requests
 from aiogram import Router, F
 from aiogram.enums import ChatType
 from aiogram.filters import CommandStart, StateFilter, Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ReplyKeyboardRemove
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ReplyKeyboardRemove, InlineQuery
 from aiogram_media_group import media_group_handler
 
 from config import PHOTOS_DIR, ADMIN_CHAT_ID, OWNER_TG_IDS
@@ -13,8 +15,9 @@ from src.bot.texts import user_texts
 from src.bot.states import user_states
 from src.database import get_session
 from src.database.crud import get_user, create_user, update_user, create_draft, list_drafts, delete_draft, update_draft, get_draft
-from src.database.schemas import SharedResultDraftCreate, SharedResultDraftRead, UserCreate, SharedResultDraftUpdate, Gender, UserUpdate
-from src.helpers import send_draft_photos_if_exist
+from src.database.schemas import SharedResultDraftCreate, SharedResultDraftRead, UserCreate, SharedResultDraftUpdate, Gender, Appointed, UserUpdate
+from src.database.schemas.product_search_result import ProductSearchResultBase, ProductSearchResultRead
+from src.helpers import missing_required_in_draft, send_draft_photos_if_exist
 
 async def user_blocked_filter(obj: Message | CallbackQuery):
     user_id = obj.from_user.id
@@ -35,6 +38,7 @@ ADMIN_MESSAGES: dict[int, int] = {}
 user_router = Router(name="user")
 user_router.message.filter(user_blocked_filter)
 user_router.callback_query.filter(user_blocked_filter, lambda call: call.data.startswith("user"))
+user_router.inline_query.filter(lambda inline_query: inline_query.chat_type in (ChatType.PRIVATE, ChatType.SENDER))
 
 @user_router.message(CommandStart())
 async def handle_start(message: Message, state: FSMContext):
@@ -156,6 +160,13 @@ async def handle_edit_draft(message: Message, state: FSMContext):
             draft_update = SharedResultDraftUpdate(**{what: new_value})
             async with get_session() as session: draft = await update_draft(session, draft_id, draft_update)
 
+    elif what == 'appointed':
+        if message.text.strip() not in get_args(Appointed): return await message.answer(user_texts.wrong_appointed, reply_markup=user_keyboards.choose_appointed)
+        else:
+            new_value = message.text.strip()
+            draft_update = SharedResultDraftUpdate(**{what: new_value})
+            async with get_session() as session: draft = await update_draft(session, draft_id, draft_update)
+
     elif state == user_states.EditDraft.photo:
         if not message.photo: return await message.answer("Ошибка. <b>Отправьте фотографии (до 3х штук)</b>")
         else:
@@ -236,7 +247,11 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
                                 break
 
                     new_state = getattr(user_states.EditDraft, data[2], None)
-                    await call.message.answer(f'<b>Старое значение убрано для {what.lower()}</b>. Введите новое\n\nВозврат в главное меню — /start', reply_markup=user_keyboards.choose_gender if data[2] =='gender' else None)
+                    keyboard = None
+                    if data[2] == "gender": keyboard = user_keyboards.choose_gender
+                    elif data[2] == "appointed": keyboard = user_keyboards.choose_appointed
+                    elif data[2] == "drugs": keyboard = user_keyboards.search_review_product
+                    await call.message.answer(f'<b>Старое значение убрано для {what.lower()}</b>. Введите новое\n\nВозврат в главное меню — /start', reply_markup=keyboard)
                     await state.set_state(new_state)
                     await state.update_data(what=data[2], draft_id=draft_id, what_kword=what)
 
@@ -283,7 +298,11 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
     elif data[0] == "post_draft":
         draft_id = int(data[1])
         async with get_session() as session: draft = await get_draft(session, draft_id)
+        if not draft: return await call.message.answer(user_texts.old_draft, reply_markup=user_keyboards.main_menu)
         if draft.user_id != call.from_user.id: return await call.message.edit_text(f"Ошибка: Черновик #{draft.id} <b>не в вашем владении!</b>")
+        missing = missing_required_in_draft(draft)
+        if missing:
+            return await call.message.answer(user_texts.mandatory_unfilled, reply_markup=user_keyboards.preview_keyboard(draft))
         draft_photos_dir = Path(draft.photo_url) if draft.photo_url else None
         if draft_photos_dir and draft_photos_dir.exists() and draft_photos_dir.is_dir():
             photos = [p for p in draft_photos_dir.iterdir() if p.is_file() and p.suffix.lower() == ".jpg"]
@@ -315,3 +334,11 @@ async def handle_user_call(call: CallbackQuery, state: FSMContext):
             else: await call.message.edit_text("<b>🙃 Сожалеем, в час можно отправить до 3х сообщений</b>", reply_markup=user_keyboards.main_menuu)
 
     return None
+
+@user_router.inline_query()
+async def handle_inline_query(inline_query: InlineQuery):
+    data = inline_query.query.split(':')
+    if data[0] == "search_review_product":
+        query = data[1]
+        request = requests.get(f"https://elixirpeptides.devsivanschostakov.org/api/v1/search/products?q={query.replace(' ', '%20')}&limit=1")
+        result = ProductSearchResultRead.model_validate_json(request.json())
